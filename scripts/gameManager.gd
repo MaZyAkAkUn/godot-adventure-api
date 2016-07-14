@@ -1,106 +1,108 @@
 
 extends Node2D
 #---PUBLIC CONFIG VARIABLES
-var clearMode = 0 #0=clear dialogue after choice/photo, 1=leave last dialogue instead
-var charThumbDict = {} #{"name": "thumb_preloaded"} #character thumbnail database
+var char_thumbs = {} #{"name": "thumb_preloaded"} #character thumbnail database
+var char_voice = {} #{"name": [voices for the character]
+var async_dialogues = true #if false, the dialogue becoems same as chocies/media
 
 #---PRIVATE VARIABLES
-var _viewDB = [] #LIFO structure that holds dialogues, choices, & photos
-var _contentType = '' #determine type in _viewDB switch @ _process
-var _canProgress = true #used to manage progression with _viewShield
+var _viewDB = [] #LIFO structure that holds dialogues, choices, & medias
+var _content_type = '' #determine type in _viewDB switch @ _process
+var _can_progress = true #used to manage progression with _view_shield
 
-var _currentCb = ''
-var _currentCaller = ''
-
-onready var _dlText = get_node('DialogueSys/DialogueText')
-onready var _dlThumb = get_node('DialogueSys/DialogueThumb')
-onready var _chBtnArr = get_node('ChoiceSys/ScrollContainer/VButtonArray')
-onready var _phSprite = get_node('PhotoSys/Sprite')
-onready var _viewShield = get_node('ViewShield')
+var _current_cb = ''
+var _current_caller = ''
+var togg
+onready var _dialogue_text = get_node('DialogueSys/DialogueText')
+onready var _dialogue_thumb = get_node('DialogueSys/DialogueThumb')
+onready var _choice_button_arr = get_node('ChoiceSys/ScrollContainer/VButtonArray')
+onready var _media_sprite = get_node('MediaSys/Sprite')
+onready var _media_audio = get_node('MediaSys/Audio')
+onready var _view_shield = get_node('ViewShield')
 
 #---PUBLIC API
-func dialogue(charNameStr, textStr, posBF):
-	_viewDB.push_front({"type": "dialogue", "content": textStr, "pos": posBF, "name": charNameStr})
+func dialogue(char_name_str, text_str, pos_enum):
+	_viewDB.push_front({"type": "dialogue", "content": text_str, "pos": pos_enum, "name": char_name_str})
 
-func choice(choiceTextArr, callback, caller, posBF): 
-	_viewDB.push_front({"type": "choice", "content": choiceTextArr, "pos": posBF}) 
-	_currentCb = callback 
-	_currentCaller = caller
+func choice(choice_text_arr, callback_fn, caller_obj, pos_enum): 
+	_viewDB.push_front({"type": "choice", "content": choice_text_arr, "pos": pos_enum}) 
+	_current_cb = callback_fn
+	_current_caller = caller_obj
 
-func photo(pathStr, preloadedBool, posBF):
-	_viewDB.push_front({"type": "photo", "preloaded": preloadedBool, "content": pathStr, "pos": posBF})
+func media(type_str, path_str, pos_enum):
+	if (type_str == 'sprite'):
+		_viewDB.push_front({"type": "media_sprite", "content": path_str, "pos": pos_enum})
+	elif (type_str == 'audio'):
+		_viewDB.push_front({"type": "media_audio", "content": path_str, "pos": pos_enum})
 
-
-#---VIEW SHIELD IMPLEMENTATION (Should be on whenever there's dialogue/choice/photo)
+#---VIEW SHIELD IMPLEMENTATION (Should be on whenever there's dialogue/choice/media)
 func _on_ViewShield_pressed():
-	if(_chBtnArr.get_parent().is_hidden()): #not in choice mode, can _progress
+	if(_choice_button_arr.get_parent().is_hidden()): #not in choice mode, can _progress
 		_progress()
 
 func _on_choice_btnSelected(btnId):
-	_currentCaller.call(_currentCb, btnId)
+	_current_caller.call(_current_cb, btnId)
 	_progress()
 
-func _progress(): #(Let dialogue _progress, photo disappear, or choice=-1)
-	_clear()
-	if(_viewDB.size() == 0): #if no more to _progress through, hide shield & clear (mode 0)
-		_viewShield.set_hidden(true)
-		_dlText.clear()
-		_dlThumb.set_texture(null)
-		_dlText.set_hidden(true)
-		_dlThumb.set_hidden(true)
-	if(!_chBtnArr.get_parent().is_hidden()): #also hide any choices (if any)
-		_chBtnArr.get_parent().set_hidden(true)
-	_canProgress = true
+func _progress(): #(Let dialogue _progress, media disappear, or choice=-1)
+	if(!async_dialogues && _viewDB.size() > 0):
+		_clear()
+	if(_viewDB.size() == 0): #if no more to _progress through, hide shield
+		_view_shield.set_hidden(true)
+	if(!_choice_button_arr.get_parent().is_hidden()): #hide any choices (if any)
+		_choice_button_arr.get_parent().set_hidden(true)
+	_media_sprite.set_hidden(true)
+	_media_audio.stop_all()
+	_can_progress = true
 
 func _clear():
-	if(clearMode == 0):
-		_dlText.clear()
-		_dlThumb.set_texture(null)
-		_dlText.set_hidden(true)
-		_dlThumb.set_hidden(true)
-	_chBtnArr.clear()
-	_phSprite.set_hidden(true)
+	_dialogue_text.clear()
+	_dialogue_thumb.set_texture(null)
+	_dialogue_text.set_hidden(true)
+	_dialogue_thumb.set_hidden(true)
+	_choice_button_arr.clear()
+	_media_sprite.set_hidden(true)
+	_media_audio.stop_all()
 
 
 #---SWITCH TO DISPLAY _viewDB CONTENTS
 func _ready():
 	set_process(true)
-	_chBtnArr.connect('button_selected', self, '_on_choice_btnSelected')
+	_choice_button_arr.connect('button_selected', self, '_on_choice_btnSelected')
 
 func _process(delta):
-	if((_viewDB.size() >= 1) && _canProgress):
-		_contentType = _viewDB[_viewDB.size()-1]["type"]
-		_viewShield.set_hidden(false)
-		_canProgress = false
-		if(_contentType == "dialogue"):
+	if((_viewDB.size() >= 1) && _can_progress):
+		_content_type = _viewDB[_viewDB.size()-1]["type"]
+		_view_shield.set_hidden(false)
+		_can_progress = false
+		if(_content_type == "dialogue"):
 			_dialogueLogic()
-		elif(_contentType == "choice"):
+		elif(_content_type == "choice"):
 			_choiceLogic()
-		elif(_contentType == "photo"):
-			_photoLogic()
+		elif(_content_type == "media_sprite" or _content_type == "media_audio"):
+			_mediaLogic()
 
 
 #---DISPLAY _viewDB contents (just display thier respective overlay)
 func _dialogueLogic(): 
-	_dlText.clear()
-	_dlText.add_text(_viewDB[_viewDB.size()-1]["content"])
-	_dlThumb.set_texture(charThumbDict[_viewDB[_viewDB.size()-1]["name"]])
-	_dlText.set_hidden(false)
-	_dlThumb.set_hidden(false)
+	_dialogue_text.clear()
+	_dialogue_text.add_text(_viewDB[_viewDB.size()-1]["content"])
+	_dialogue_thumb.set_texture(char_thumbs[_viewDB[_viewDB.size()-1]["name"]])
+	_dialogue_text.set_hidden(false)
+	_dialogue_thumb.set_hidden(false)
 	_viewDB.pop_back()
 
 func _choiceLogic():
-	_chBtnArr.clear()
-	_chBtnArr.get_parent().set_hidden(false)
+	_choice_button_arr.clear()
+	_choice_button_arr.get_parent().set_hidden(false)
 	for item in _viewDB[_viewDB.size()-1]["content"]:
-		_chBtnArr.add_button(item)
+		_choice_button_arr.add_button(item)
 	_viewDB.pop_back()
 
-func _photoLogic():
-	_phSprite.set_hidden(false)
-	if(_viewDB[_viewDB.size()-1]["preloaded"]):
-		_phSprite.set_texture(_viewDB[_viewDB.size()-1]["content"])
-	else:
-		_phSprite.set_texture(load(_viewDB[_viewDB.size()-1]["content"]))
-	
+func _mediaLogic():
+	if(_viewDB[_viewDB.size()-1]["type"] == "media_sprite"):
+		_media_sprite.set_hidden(false)
+		_media_sprite.set_texture(_viewDB[_viewDB.size()-1]["content"])
+	elif(_viewDB[_viewDB.size()-1]["type"] == "media_audio"):
+		_media_audio.play(_viewDB[_viewDB.size()-1]["content"])
 	_viewDB.pop_back()
