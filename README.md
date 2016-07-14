@@ -5,7 +5,8 @@ Adventure/Visual Novel framework for the Godot Engine.
 Basically, using a simple API, you can setup 'clickables' that you can click/tap to:
 * start dialogue/conversation with characters that have different 'thumbnails'
 * show a choice & run a callback function with the result
-* show an overlay ('photo') during a dialogue
+* show an overlay or play audio during a dialogue
+(character voices support coming soon)
 You would use Godot's built in functionality to change scenes, add music, etc.
 
 ##Getting Started
@@ -19,7 +20,7 @@ You would use Godot's built in functionality to change scenes, add music, etc.
 
 1. Open up the template scene (only scene included), this will serve as a basic game scene
 2. The whole framework is in GameManager.gd, it includes the functions you need
-3. Insert 'clickables' (items in game the user can click) and .connect() them
+3. Insert 'clickables' (items in game the user can click) and .connect() them (or use the GUI!)
 4. Start using the API! Note that ClickManager.gd is there so you can test the framework
 
 ###The API
@@ -30,8 +31,8 @@ onready var g = get_tree().get_root().get_node('GameManager')
 ```
 #### Add the Characters & thier thumbnails
 ```gdscript
-g.charThumbDict['Harold Finch'] = preload('res://assets/sample/s_Finch.png')
-g.charThumbDict['Clime'] = preload('res://assets/sample/s_Clime.png')
+g.char_thumbs['Harold Finch'] = preload('res://assets/sample/s_Finch.png')
+g.char_thumbs['Clime'] = preload('res://assets/sample/s_Clime.png')
 #...for each character...
 ```
 #### Add a dialogue (conversations that can characters have)
@@ -47,10 +48,10 @@ g.choice(['I prefer cats!', 'I prefer dogs!'], '_ch_catsOrDogs', self, 0)
 var lovesCatsOrDogs = '' #so we can use the selection later
 
 func _ch_catsOrDogs(selection):
-  if selection == 0:
+  if selection == 0: #if they love cats...
     lovesCatsOrDogs = 'cats'
     g.dialogue('Clime', 'Oh, so you prefer cats I see...', 0)
-  elif selection == 1:
+  elif selection == 1: #if they love dogs...
     lovesCatsOrDogs = 'dogs'
     g.dialogue('Clime', 'Dogs it is!', 0)
   g.dialogue('Clime' 'Prefer any species?', 0)
@@ -60,12 +61,12 @@ func _ch_speciesPref(selection):
   #...and so on...
 ```
 _Note how whenever there's a choice, the game execution **has** to continue from the callback function_
-#### Add a mid-conversation photo
+#### Add a mid-conversation media (photo/audio)
 ```gdscript
-g.photo('res://assets/sample/samplePhoto.png', false, 0)
-#--OR--
-var preloadedPhoto = preload('res://assets/sample/samplePhoto.png')
-g.photo(preloadedPhoto, true, 0)
+var my_photo = preload(res://assets/sample/samplePhoto.png)
+g.media('sprite', my_photo, 0)
+
+g.media('audio', 'audio_name_in_godot', 0)
 ```
 _Note you can't just hide/show a photo using normal Godot scripting due to the framework's internal implementation (see implementation note below)_
 
@@ -74,18 +75,17 @@ Optional configurations accepted. Set them in _ready() before using any of the f
 
 Different clearing styles:
 ```gdscript
-g.clearMode = 0 #dialogues/photos aren never displayed with choices, 
-            = 1 #last dialogue/photo stays when there's a choice
+g.async_dialogues = true #media presists during last dialogue
 ```
 _planned in the future:_
 ```gdscript
-g.clearTimeout = 0 #default, show next dialogue/photo/choice on user click
+g.dialogue_timeout = 0 #default, show next dialogue/photo/choice on user click
                = n #show next dialogue/photo/choice after n milliseconds
 ```
 ```gdscript
-g.keepThumb(charName) 
+g.keep_thumb(charName) 
 #keep the thumbnail of a character on screen even after finishing dialogue (VN-style)
-g.removeThumb(charName) #remove kept thumbnail
+g.remove_thumb(charName) #remove kept thumbnail
 ```
 ### What are all these zeroes at the end?
 They will be used in the future to implement a system where you could vary the position of the GUI elements.
@@ -93,11 +93,9 @@ This could be used to position the character thumbnails in different positions d
 
 ### Note about framework implementation
 
-The framework works by adding all ```dialogue()```, ```choice()```, and ```photo()``` call parameters into a FIFO-style array at runtime.
+The framework works by adding all ```dialogue()```, ```choice()```, and ```media()``` call parameters into a FIFO-style array at runtime.
 This means that any logic you execute between two of these functions will happen _after both these functions' effect has executed_.
 
 This is the reason you can't just do a sprite.set_hidden(false) in the middle of multiple dialogue functions.
-It also means that whenever choice() is used, _all_ following game logic/other functions should be executed after the choice's callback function runs.
-
-(if a better implementation is ever contributed, it will be accepted with open arms!)
+It also means that whenever choice() is used, _all_ following game logic/other functions should be executed after the choice's callback function runs. (if a better implementation is ever contributed, it will be accepted with open arms!)
 
