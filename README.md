@@ -1,4 +1,6 @@
 # Godot Adventure Framework
+## Update
+The framework is currently working with the API below. However, it will be updated soon with a major release that includes visual scripting as a Godot Plugin and much more features that allow for a full fledged adventure games (with or without coding!).
 
 ## Description
 Adventure/Visual Novel framework for the Godot Engine.
