@@ -1,9 +1,7 @@
-# Godot Adventure Framework
-## Update
-The framework is currently working with the API below. However, it will be updated soon with a major release that includes visual scripting as a Godot Plugin and much more features that allow for a full fledged adventure games (with or without coding!).
+# Godot Adventure API
 
 ## Description
-Adventure/Visual Novel framework for the Godot Engine.
+Adventure/Visual Novel scripting API for the Godot Engine.
 Basically, using a simple API, you can setup 'clickables' that you can click/tap to:
 * start dialogue/conversation with characters that have different 'thumbnails'
 * show a choice & run a callback function with the result
