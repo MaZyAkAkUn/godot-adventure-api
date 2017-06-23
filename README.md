@@ -9,21 +9,21 @@ Basically, using a simple API, you can setup 'clickables' that you can click/tap
 (character voices support coming soon)
 You would use Godot's built in functionality to change scenes, add music, etc.
 
-##Getting Started
+## Getting Started
 1. Clone this repository or download it
 2. In the Godot project manager, select 'import' to add this project
 3. Get started by glancing at the template scene & reading the docs below
 
-##Documentation
+## Documentation
 
-###Basic usage
+### Basic usage
 
 1. Open up the template scene (only scene included), this will serve as a basic game scene
 2. The whole framework is in GameManager.gd, it includes the functions you need
 3. Insert 'clickables' (items in game the user can click) and .connect() them (or use the GUI!)
 4. Start using the API! Note that ClickManager.gd is there so you can test the framework
 
-###The API
+### The API
 
 #### Reference GameManager.gd (anywhere in the template scene)
 ```gdscript
